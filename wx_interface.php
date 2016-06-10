@@ -14,7 +14,7 @@ $corpId = "wx50e12c60234a4372";
 $echoStr = $_GET["echostr"];
 if (!empty($echoStr)) {
   //valid signature , option
-        if(checkSignature()){
+        if(checkSignature($encodingAesKey,$token,$corpId)){
           exit;
         }
 }
@@ -203,7 +203,7 @@ function check_user($fromUsername)
     }
 
 }
-function checkSignature()
+function checkSignature($encodingAesKey,$token,$corpId)
   {
         // you must define TOKEN by yourself
         if (!defined("TOKEN")) {
@@ -214,18 +214,18 @@ function checkSignature()
         $timestamp = $_GET["timestamp"];
         $nonce = $_GET["nonce"];
         $echoStr = $_GET["echostr"]; 
-    $token = TOKEN;
-    $wxcpt = new WXBizMsgCrypt($token, $encodingAesKey, $corpId);
-    $errCode = $wxcpt->VerifyURL($signature, $timestamp, $nonce, $echostr, $sEchoStr);
-    if ($errCode == 0) {
-      //
-      // 验证URL成功，将sEchoStr返回
-      // HttpUtils.SetResponce($sEchoStr);
-      echo $sEchoStr;
-      return true;
-    } else {
-      print("ERR: " . $errCode . "\n\n");
-      return false;
-    }
+        $token = TOKEN;
+        $wxcpt = new WXBizMsgCrypt($token, $encodingAesKey, $corpId);
+        $errCode = $wxcpt->VerifyURL($signature, $timestamp, $nonce, $echoStr, $sEchoStr);
+        if ($errCode == 0) {
+          //
+          // 验证URL成功，将sEchoStr返回
+          //HttpUtils.SetResponce($sEchoStr);
+          echo $sEchoStr;
+          return true;
+        } else {
+          print("ERR: " . $errCode . "\n\n");
+          return false;
+        }
   }
 ?>
