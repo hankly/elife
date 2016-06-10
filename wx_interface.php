@@ -210,7 +210,7 @@ function checkSignature()
             throw new Exception('TOKEN is not defined!');
         }
         
-        $signature = $_GET["signature"];
+        $signature = $_GET["msg_signature"];
         $timestamp = $_GET["timestamp"];
         $nonce = $_GET["nonce"];
         $echoStr = $_GET["echostr"]; 
