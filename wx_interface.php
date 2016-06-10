@@ -1,17 +1,20 @@
 <?php
 //装载模板文件
+include_once ("wxlibs/WXBizMsgCrypt.php");
 include_once("wx_tpl.php");
 include_once("base-class.php");
 include_once("DB.php");
 
 define("TOKEN", "weixin");
+$encodingAesKey = "F2ftjdmaMJX2Y8tRjRFuBqtFvAt9yQ8OITAza56tdah";
+$token = "weixin";
+$corpId = "wx50e12c60234a4372";
 //新建sae数据库类
 //$mysql = new SaeMysql();
 $echoStr = $_GET["echostr"];
 if (!empty($echoStr)) {
   //valid signature , option
         if(checkSignature()){
-          echo $echoStr;
           exit;
         }
 }
@@ -210,17 +213,18 @@ function checkSignature()
         $signature = $_GET["signature"];
         $timestamp = $_GET["timestamp"];
         $nonce = $_GET["nonce"];
-            
+        $echoStr = $_GET["echostr"]; 
     $token = TOKEN;
-    $tmpArr = array($token, $timestamp, $nonce);
-        // use SORT_STRING rule
-    sort($tmpArr, SORT_STRING);
-    $tmpStr = implode( $tmpArr );
-    $tmpStr = sha1( $tmpStr );
-    
-    if( $tmpStr == $signature ){
+    $wxcpt = new WXBizMsgCrypt($token, $encodingAesKey, $corpId);
+    $errCode = $wxcpt->VerifyURL($signature, $timestamp, $nonce, $echostr, $sEchoStr);
+    if ($errCode == 0) {
+      //
+      // 验证URL成功，将sEchoStr返回
+      // HttpUtils.SetResponce($sEchoStr);
+      echo $sEchoStr;
       return true;
-    }else{
+    } else {
+      print("ERR: " . $errCode . "\n\n");
       return false;
     }
   }
