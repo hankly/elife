@@ -61,22 +61,19 @@ if (!empty($postStr)){
                 {
                     $weather_array = getWeatherInfo("靖江");
                     $resultStr=transmitNews($postStr,$weather_array);
-                    $sEncryptMsg = ""; //xml格式的密文
-                    $errCode = $wxcpt->EncryptMsg($resultStr, $timestamp, $nonce, $sEncryptMsg);
-                    if ($errCode == 0) {
-                      echo $sEncryptMsg;
-                      exit;
-                    } else {
-                      echo "";
-                      exit;
-                    }
                 }else if($EventKey == "weather_nj"){
-                    $rep_content = "今天是 ".date("Y-m-d")."，南京天气很好";
+                    $weather_array = getWeatherInfo("南京");
+                    $resultStr=transmitNews($postStr,$weather_array);
+                }else if($EventKey == "weather_sz"){
+                    $weather_array = getWeatherInfo("深圳");
+                    $resultStr=transmitNews($postStr,$weather_array);
+                }else if($EventKey == "weather_jl"){
+                    $weather_array = getWeatherInfo("吉林");
+                    $resultStr=transmitNews($postStr,$weather_array);
                 }else{
                     $rep_content="接口正在开发中....";
-                    
+                    $resultStr = sprintf($textTpl, $fromUsername, $toUsername, time(), "text", $rep_content);
                 }
-                $resultStr = sprintf($textTpl, $fromUsername, $toUsername, time(), "text", $rep_content);
                 $sEncryptMsg = ""; //xml格式的密文
                 $errCode = $wxcpt->EncryptMsg($resultStr, $timestamp, $nonce, $sEncryptMsg);
                 if ($errCode == 0) {
