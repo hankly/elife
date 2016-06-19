@@ -47,7 +47,7 @@ if (!empty($postStr)){
         $toUsername = $postObj->ToUserName;
         //消息类型
         $form_MsgType = $postObj->MsgType;
-        $resultStr = sprintf($textTpl, $fromUsername, $toUsername, time(), "text", $postObj->Content);
+        $resultStr = sprintf($textTpl, $fromUsername, $toUsername, time(), "text", var_dump(postObj));
         $sEncryptMsg = ""; //xml格式的密文
         $errCode = $wxcpt->EncryptMsg($resultStr, $timestamp, $nonce, $sEncryptMsg);
         if ($errCode == 0) {
