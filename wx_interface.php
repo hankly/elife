@@ -47,7 +47,9 @@ if (!empty($postStr)){
         $toUsername = $postObj->ToUserName;
         //消息类型
         $form_MsgType = $postObj->MsgType;
-        $resultStr = sprintf($textTpl, $fromUsername, $toUsername, time(), "text", "接口正在开发中....");
+
+        $rep_content="接口正在开发中....".$form_MsgType." ".$postObj->EventKey;
+        $resultStr = sprintf($textTpl, $fromUsername, $toUsername, time(), "text", $rep_content);
         $sEncryptMsg = ""; //xml格式的密文
         $errCode = $wxcpt->EncryptMsg($resultStr, $timestamp, $nonce, $sEncryptMsg);
         if ($errCode == 0) {
