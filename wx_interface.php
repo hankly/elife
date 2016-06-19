@@ -47,18 +47,37 @@ if (!empty($postStr)){
         $toUsername = $postObj->ToUserName;
         //消息类型
         $form_MsgType = $postObj->MsgType;
-
-        $rep_content="接口正在开发中....".$form_MsgType." ".$postObj->EventKey;
-        $resultStr = sprintf($textTpl, $fromUsername, $toUsername, time(), "text", $rep_content);
-        $sEncryptMsg = ""; //xml格式的密文
-        $errCode = $wxcpt->EncryptMsg($resultStr, $timestamp, $nonce, $sEncryptMsg);
-        if ($errCode == 0) {
-          echo $sEncryptMsg;
-          exit;
-        } else {
-          echo "";
-          exit;
+        if($form_MsgType=="event")
+        {
+            //获取事件类型
+            $form_Event = $postObj->Event;
+            //点击事件
+            if($form_Event=="click")
+            {
+                //回复欢迎文字消息
+                $EventKey=$postObj->EventKey;
+                if($EventKey == "weather_jj")
+                {
+                    $rep_content = "今天是 ".date("Y-m-d")."，靖江天气很好";
+                }else if($EventKey == "weather_nj"){
+                    $rep_content = "今天是 ".date("Y-m-d")."，南京天气很好";
+                }else{
+                    $rep_content="接口正在开发中....";
+                    
+                }
+                $resultStr = sprintf($textTpl, $fromUsername, $toUsername, time(), "text", $rep_content);
+                $sEncryptMsg = ""; //xml格式的密文
+                $errCode = $wxcpt->EncryptMsg($resultStr, $timestamp, $nonce, $sEncryptMsg);
+                if ($errCode == 0) {
+                  echo $sEncryptMsg;
+                  exit;
+                } else {
+                  echo "";
+                  exit;
+                }
+            }
         }
+        
         
         
       } else {
@@ -97,4 +116,5 @@ function checkSignature($encodingAesKey,$token,$corpId)
           return false;
         }
   }
+
 ?>
