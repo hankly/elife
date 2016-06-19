@@ -40,7 +40,7 @@ if (!empty($postStr)){
         // 解密成功，sMsg即为xml格式的明文
         // TODO: 对明文的处理
         // For example:
-        $postObj =simplexml_load_string($postStr);
+        $postObj =simplexml_load_string($sMsg);
         //发送消息方ID
         $fromUsername = $postObj->FromUserName;
         //接收消息方ID
