@@ -4,6 +4,7 @@ include_once ("wxlibs/WXBizMsgCrypt.php");
 include_once("wx_tpl.php");
 include_once("base-class.php");
 include_once("DB.php");
+include_once("weather.php");
 
 define("TOKEN", "weixin");
 $encodingAesKey = "F2ftjdmaMJX2Y8tRjRFuBqtFvAt9yQ8OITAza56tdah";
@@ -58,7 +59,17 @@ if (!empty($postStr)){
                 $EventKey=$postObj->EventKey;
                 if($EventKey == "weather_jj")
                 {
-                    $rep_content = "今天是 ".date("Y-m-d")."，靖江天气很好";
+                    $weather_array = getWeatherInfo("靖江");
+                    $resultStr=transmitNews($postStr,$weather_array);
+                    $sEncryptMsg = ""; //xml格式的密文
+                    $errCode = $wxcpt->EncryptMsg($resultStr, $timestamp, $nonce, $sEncryptMsg);
+                    if ($errCode == 0) {
+                      echo $sEncryptMsg;
+                      exit;
+                    } else {
+                      echo "";
+                      exit;
+                    }
                 }else if($EventKey == "weather_nj"){
                     $rep_content = "今天是 ".date("Y-m-d")."，南京天气很好";
                 }else{
@@ -116,5 +127,36 @@ function checkSignature($encodingAesKey,$token,$corpId)
           return false;
         }
   }
+
+function transmitNews($object, $newsArray)
+{
+    if(!is_array($newsArray)){
+        return "";
+    }
+    $itemTpl = "<item>
+                <Title><![CDATA[%s]]></Title>
+                <Description><![CDATA[%s]]></Description>
+                <PicUrl><![CDATA[%s]]></PicUrl>
+                <Url><![CDATA[%s]]></Url>
+                </item>
+                ";
+    $item_str = "";
+    foreach ($newsArray as $item){
+        $item_str .= sprintf($itemTpl, $item['Title'], $item['Description'], $item['PicUrl'], $item['Url']);
+    }
+    $newsTpl = "<xml>
+                <ToUserName><![CDATA[%s]]></ToUserName>
+                <FromUserName><![CDATA[%s]]></FromUserName>
+                <CreateTime>%s</CreateTime>
+                <MsgType><![CDATA[news]]></MsgType>
+                <Content><![CDATA[]]></Content>
+                <ArticleCount>%s</ArticleCount>
+                <Articles>
+                $item_str</Articles>
+                </xml>";
+
+    $result = sprintf($newsTpl, $object->FromUserName, $object->ToUserName, time(), count($newsArray));
+    return $result;
+}
 
 ?>
