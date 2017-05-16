@@ -1,0 +1,150 @@
+apiVersion: v1
+kind: Template
+metadata:
+  annotations:
+    description: Pega Data Server
+  creationTimestamp: 2017-04-13T02:25:33Z
+  name: pega-data-server
+  namespace: openshift
+  resourceVersion: "18851505"
+  selfLink: /oapi/v1/namespaces/openshift/templates/pega-data-server
+  uid: 78d47b56-1ff0-11e7-ad9a-fa163e74167f
+objects:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    creationTimestamp: null
+    labels:
+      template: ${NAME}
+    name: ${NAME}
+  spec:
+    portalIP: ""
+    ports:
+    - name: ${NAME}
+      nodePort: 0
+      port: 80
+      protocol: TCP
+      targetPort: 80
+    selector:
+      name: ${NAME}
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  id: ${NAME}-route
+  kind: Route
+  metadata:
+    annotations:
+      description: Route for pega data.
+    labels:
+      application: ${NAME}
+    name: ${NAME}-route
+  spec:
+    host: ${APPLICATION_DOMAIN}
+    path: /
+    port:
+      targetPort: ${NAME}
+    to:
+      kind: Service
+      name: ${NAME}
+- apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    labels:
+      template: ${NAME}
+    name: ${NAME}-pvclaim
+  spec:
+    accessModes:
+    - ReadWriteOnce
+    resources:
+      requests:
+        storage: 15Gi
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    creationTimestamp: null
+    labels:
+      template: ${NAME}
+    name: ${NAME}
+  spec:
+    replicas: 1
+    selector:
+      name: ${NAME}
+    strategy:
+      type: Recreate
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          name: ${NAME}
+      spec:
+        containers:
+        storage: 15Gi
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    creationTimestamp: null
+    labels:
+      template: ${NAME}
+    name: ${NAME}
+  spec:
+    replicas: 1
+    selector:
+      name: ${NAME}
+    strategy:
+      type: Recreate
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          name: ${NAME}
+      spec:
+        containers:
+          env:
+          - name: NAME
+            value: ${NAME}
+          image: registry.sz-internal.huawei.com:5000/pega/httpd
+          imagePullPolicy: Always
+          livenessProbe:
+            initialDelaySeconds: 100
+            tcpSocket:
+              port: 80
+            timeoutSeconds: 20
+          name: ${NAME}
+          ports:
+          - containerPort: 80
+            protocol: TCP
+          readinessProbe:
+            exec:
+              command:
+              - /bin/sh
+              - -i
+              - -c
+              - ls -l /usr/local/apache2/htdocs/index.html
+            initialDelaySeconds: 100
+            timeoutSeconds: 20
+          resources:
+            limits:
+              memory: 4096Mi
+          securityContext:
+            capabilities: {}
+            privileged: false
+          terminationMessagePath: /dev/termination-log
+          volumeMounts:
+          - mountPath: /usr/local/apache2/htdocs
+            name: pega-data-server
+        volumes:
+        - name: ${NAME}
+          persistentVolumeClaim:
+            claimName: ${NAME}-pvclaim
+  status: {}
+parameters:
+- description: The name assigned to all of the frontend objects defined in this template.
+  displayName: Name
+  name: NAME
+  required: true
+  value: pega-data-server
+- displayName: __host
+  name: APPLICATION_DOMAIN
+  value: pegadata.sz-internal.huawei.com
