@@ -1,0 +1,290 @@
+kind: Template
+apiVersion: v1
+metadata:
+  name: pega-template
+  namespace: openshift
+  selfLink: "/oapi/v1/namespaces/openshift/templates/pega-template"
+  uid: 95345485-e254-11e6-b448-fa163ece7d01
+  resourceVersion: '11719635'
+  creationTimestamp: '2017-01-24T16:45:58Z'
+  annotations:
+    description: Pega Tomcat with Postgresql template for Centos using git
+    tags: huawei-expcloud,huawei-webapp,pega
+objects:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    creationTimestamp: 
+    labels:
+      template: pega-template
+    name: ${NAME}
+  spec:
+    portalIP: ''
+    ports:
+    - name: "${NAME}-postgresql"
+      nodePort: 0
+      port: 5432
+      protocol: TCP
+      targetPort: 5432
+    - name: "${NAME}"
+      nodePort: 0
+      port: 17001
+      protocol: TCP
+      targetPort: 17001
+    selector:
+      name: ${NAME}
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  id: ${NAME}-route-ids
+  kind: Route
+  metadata:
+    annotations:
+      description: Route for pega app.
+    labels:
+      application: ${NAME}
+      huawei-type: PEGA-design
+      ispubweb: 'true'
+    name: ${NAME}-route
+  spec:
+    host: ${APPLICATION_DOMAIN}
+    path: "/prweb"
+    port:
+      targetPort: ${NAME}
+    to:
+      kind: Service
+      name: ${NAME}
+
+- apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    labels:
+      template: pega-template
+    name: ${NAME}-pvclaim
+  spec:
+    accessModes:
+    - ReadWriteOnce
+    resources:
+      requests:
+        storage: 15Gi
+- apiVersion: v1
+  kind: BuildConfig
+  metadata:
+    annotations:
+      openshift.io/generated-by: OpenShiftWebConsole
+    labels:
+      app: ${NAME}
+      childtype: pega
+      ictstudio: 'true'
+      ifbusiness: 'yes'
+      template: pega-template
+      type: pegaapp
+    name: ${NAME}
+  spec:
+    output:
+      to:
+        kind: ImageStreamTag
+        name: ${NAME}:latest
+    postCommit: {}
+    resources: {}
+    source:
+      contextDir: ''
+      git:
+        ref: ''
+        uri: ${GIT}
+      type: Git
+    strategy:
+      sourceStrategy:
+        from:
+          kind: ImageStreamTag
+          name: pega-tomcat-new:latest
+          namespace: openshift
+      type: Source
+    triggers:
+    - github:
+        secret: 9afa39d41a6bc6aa0d30cefbc2af5ef00f3264d9
+      type: GitHub
+    - imageChange: {}
+      type: ImageChange
+    - type: ConfigChange
+  status:
+    lastVersion: 0
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    creationTimestamp: 
+    labels:
+      template: pega-template
+    name: ${NAME}
+  spec:
+    replicas: 1
+    selector:
+      name: ${NAME}
+    strategy:
+      type: Recreate
+    template:
+      metadata:
+        creationTimestamp: 
+        labels:
+          name: ${NAME}
+      spec:
+        containers:
+        - capabilities: {}
+          env:
+          - name: NAME
+            value: ${NAME}
+          - name: PGHOST
+            value: localhost
+          - name: PGDATA
+            value: "/var/lib/pgsql/9.4/data/userdata"
+          - name: JAVA_HOME
+            value: "/opt/java"
+          - name: CLASSPATH
+            value: ".:$JAVA_HOME/lib/dt.jar:$JAVA_HOME/lib/tool.jar"
+          - name: PATH
+            value: "/usr/pgsql-9.4/bin:/opt/java/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+          - name: TZ
+            value: CST-8
+          image: pega-postgresql-new
+          imagePullPolicy: Always
+          livenessProbe:
+            initialDelaySeconds: 300
+            tcpSocket:
+              port: 5432
+            timeoutSeconds: 20
+          name: ${NAME}-postgresql
+          ports:
+          - containerPort: 5432
+            protocol: TCP
+          readinessProbe:
+            exec:
+              command:
+              - "/bin/sh"
+              - "-i"
+              - "-c"
+              - "ls -l /var/lib/pgsql/9.4/data/userdata/postmaster.pid"
+            initialDelaySeconds: 300
+            timeoutSeconds: 20
+          resources:
+            limits:
+              memory: 2048Mi
+          securityContext:
+            capabilities: {}
+            privileged: false
+          terminationMessagePath: "/dev/termination-log"
+          volumeMounts:
+          - mountPath: "/var/lib/pgsql/9.4/data"
+            name: pega-${NAME}
+        - capabilities: {}
+          env:
+          - name: NAME
+            value: ${NAME}
+          - name: PGHOST
+            value: postgres04
+          - name: HOME
+            value: "/opt/tomcat/"
+          - name: JAVA_HOME
+            value: "/opt/tomcat/java"
+          - name: CLASSPATH
+            value: ".:$JAVA_HOME/lib/dt.jar:$JAVA_HOME/lib/tool.jar"
+          - name: PATH
+            value: "/usr/local/git/bin:/usr/pgsql-9.4/bin:/opt/tomcat/apache-tomcat/bin:/opt/tomcat/java/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+          - name: GITURL
+            value: ${GIT}
+          - name: TZ
+            value: CST-8
+          image: pega-tomcat-new
+          imagePullPolicy: Always
+          livenessProbe:
+            initialDelaySeconds: 100
+            httpGet:
+              path: /prweb/PRRestService/expservice/git/giturlsync
+              port: 17001
+              scheme: HTTP
+            timeoutSeconds: 20
+            failureThreshold: 5
+            successThreshold: 1
+          name: ${NAME}-tomcat
+          ports:
+          - containerPort: 17001
+            protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /prweb/PRRestService/expservice/git/giturlsync
+              port: 17001
+              scheme: HTTP
+            initialDelaySeconds: 200
+            timeoutSeconds: 20
+          resources:
+            limits:
+              memory: 4096Mi
+          securityContext:
+            capabilities: {}
+            privileged: false
+          terminationMessagePath: "/var/log/pega-tomcat-log"
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        volumes:
+        - name: pega-${NAME}
+          persistentVolumeClaim:
+            claimName: ${NAME}-pvclaim
+    triggers:
+    - imageChangeParams:
+        automatic: true
+        containerNames:
+        - ${NAME}-postgresql
+        from:
+          kind: ImageStreamTag
+          name: pega-postgresql-new:latest
+          namespace: ${IMAGE_STREAM_NAMESPACE}
+      type: ImageChange
+    - type: ConfigChange
+    - imageChangeParams:
+        automatic: true
+        containerNames:
+        - ${NAME}-tomcat
+        from:
+          kind: ImageStreamTag
+          name: pega-tomcat-new:latest
+          namespace: ${IMAGE_STREAM_NAMESPACE}
+      type: ImageChange
+    - type: ConfigChange
+
+  status: {}
+parameters:
+- name: NAME
+  displayName: Name
+  description: The name assigned to all of the frontend objects defined in this template.
+  value: pega
+  required: true
+#- name: PVNAME
+#  displayName: Persistent Volume Name
+#  description: The OpenShift Persistent Volume that the container use
+#  value: pega-pv0001
+#  required: true
+#- name: VOLUME_CAPACITY
+#  displayName: Persistent Volume CAPACITY
+#  description: The OpenShift Persistent Volume Capacity that postgresql need
+#  value: 15Gi
+#  required: true
+- name: GIT
+  displayName: GIT zip download URL
+  description: The URL of this APP in git.Using the zip package to import into pega.
+  value: http://629dde0ec2871fd20e86b86666b3fe1a87fa4d97@10.56.12.201:3000/zhangxianliang/cloudspace.git
+  required: true
+- name: APPLICATION_DOMAIN
+  displayName: __host
+  description: 如果不输入,系统会提供默认值.
+- name: IMAGE_STREAM_NAMESPACE
+  value: openshift
+labels:
+  template: pega-template
+  ictstudio: 'true'
+  type: webapp
+  childtype: pega
+  onlinedevelop: 'true'
+  onlinetype: pega
+  ifbusiness: 'yes'
+
