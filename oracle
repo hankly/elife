@@ -1,0 +1,48 @@
+#!/bin/bash
+# For RedHat and cousins:
+# chkconfig: 2345 40 40
+# description: 
+# processname: 
+# For SuSE and cousins
+### BEGIN INIT INFO
+# Provides:                   probe
+# Required-Start:             $syslog $remote_fs
+# Should-Start:               sendmail
+# Required-Stop:              $syslog $remote_fs
+# Should-Stop:                sendmail
+# Default-Start:              2 3 5
+# Default-Stop:
+# Short-Description:          
+# Description:                
+# X-UnitedLinux-Default-Enabled: yes
+### END INIT INFO
+#export NLS_LANG=AMERICAN_AMERICA.ZHS16GBK
+# see how we are called:
+ORACLE_USER=oracle
+case $1 in
+    start)
+    su - "$ORACLE_USER"<<EOO
+    lsnrctl start
+    sqlplus /nolog<<EOS
+    connect / as sysdba
+    startup
+EOS
+    emctl start dbconsole
+EOO
+touch /var/lock/subsys/$scriptname
+    ;;
+    stop)
+su - "$ORACLE_USER"<<EOO
+    lsnrctl stop
+    sqlplus /nolog<<EOS
+    connect / as sysdba
+    shutdown immediate
+EOS
+    emctl stop dbconsole
+EOO
+rm -f /var/lock/subsys/scriptname
+    ;;
+    *)
+    echo "Usage: $0 {start|stop}"
+    ;;
+esac
