@@ -1,0 +1,110 @@
+Environment:
+Windows Server 2012 R2
+Oracle Database 12c Release 1 (12.1.0.1.0) 
+WebLogic 12cR2 (12.1.2.0), weblogic/Pegasys1, change port to 17001/ 17002.
+JDK 1.7, x64, C:\Java
+
+
+1, Configure Windows 64;
+Enable internal ports 9300-9399 for search;
+Enable internal ports 5701-5800 for Hazelcast;
+Enable internal ports 7000/ 9042/ 9160 for DNodes;
+
+
+2, Install JDK7 (64bit), and set JAVA_HOME;
+3, Create Oracle database;
+3.1, create database PRPC;
+Config Unicode/ Process 350/ MEM 50%;
+
+3.2, create tablespace;
+
+sqlplus sys/Pegasys1@PRPC as SYSDBA
+
+
+CREATE TABLESPACE PEGARULES DATAFILE 'C:\oracle\oradata\PRPC\PEGARULES.dbf' SIZE 5000M REUSE AUTOEXTEND ON NEXT 100M MAXSIZE UNLIMITED;
+CREATE TABLESPACE PEGADATA DATAFILE 'C:\oracle\oradata\PRPC\PEGADATA.dbf' SIZE 250M REUSE AUTOEXTEND ON NEXT 20M MAXSIZE UNLIMITED;
+
+3.3, create users;
+--To create Admin user:
+CREATE USER PRPC IDENTIFIED BY PRPC DEFAULT TABLESPACE PEGARULES;
+GRANT CONNECT, RESOURCE, DBA to PRPC;
+
+--To create Rules and Data users;
+CREATE USER PEGARULES IDENTIFIED BY PEGARULES DEFAULT TABLESPACE PEGARULES;
+CREATE USER PEGADATA IDENTIFIED BY PEGADATA DEFAULT TABLESPACE PEGADATA;
+
+GRANT CONNECT, RESOURCE to PEGARULES;
+GRANT CREATE SESSION, UNLIMITED TABLESPACE to PEGARULES;
+GRANT CONNECT, RESOURCE to PEGADATA;
+GRANT UNLIMITED TABLESPACE to PEGADATA;
+
+
+3, Load rulebase
+Database username: PRPC/PRPC
+Rules Schema: PEGARULES
+Data Schema: PEGADATA
+
+4, Install WebLogic 12c generic
+java -D64 -jar wls1211_generic.jar
+Choose install folder C:\weblogic
+4.1, create new domain;
+{Weblogic_home}/common/bin/config.cmd
+Admin login: weblogic/Pegasys1
+Domain: prpc
+4.2, config weblogic
+Edit setDomainEnv.cmd:
+set USER_MEM_ARGS=-Xms2048m -Xmx4096m -XX:PermSize=512m -XX:MaxPermSize=1024m
+
+
+set EXTRA_JAVA_PROPERTIES=-Dpega.tmpdir=C:\weblogic\user_projects\domains\prpc\prtemp
+
+set JAVA_OPTIONS=%JAVA_OPTIONS% -Djava.awt.headless=true
+
+set JAVA_OPTIONS=%JAVA_OPTIONS% -Djava.net.preferIPv4Stack=true
+
+set JAVA_OPTIONS=%JAVA_OPTIONS% -Dfile.encoding=UTF-8
+
+set JAVA_OPTIONS=%JAVA_OPTIONS% -Dweblogic.client.socket.ConnectTimeout=500
+
+set EXT_PRE_CLASSPATH=C:\oracle\product\12.1.0\dbhome_1\jdbc\lib\ojdbc7.jar
+
+set DERBY_FLAG=false
+
+
+
+4.3,
+Start Weblogic, http://hostname:port/console
+
+Enable DNS Lookup, Environment > Servers > AdminServer > Configuration > Tuning, Reverse DNS Allowed
+Create JDBC Resources, New -> Generic Data Source: PegaRules, jdbc/PegaRULES, Oracle, 
+	Specify Type 4 Thin client, not XA (Oracle Driver Thin) JDBC drivers, Username/Password: PRPC/PRPC, 
+	Config Connect Pool size >60, select Targets as AdminServer, 
+Services > Messaging > JMSServers, New PRJMS_Server, 
+Services > Messaging > JMS Modules, New PRJMS_Module, 
+Create a New JMS System Module Resource, new Connection Factory, PRAsyncConnectionFactory, jms/PRAsyncTCF, Select Advanced Targeting -> Create a New Subdeployment, PRJMS_Subdeployment.
+Create a New JMS System Module Resource, Topic, PRAsyncTopic, jms/PRAsyncTopic, PRJMS_Subdeployment_Topic.
+Deploy EAR/WAR files;
+OR
+For deployment for split schema,
+Copy folder \114484_PRPC_7_1_2\archives\prpc\weblogic\ear to server, Edit plan\Plan.xml;
+    <variable>
+      <name>defaultDataSchema</name>
+      <value></value>
+    </variable>
+    <variable>
+      <name>defaultRulesSchema</name>
+      <value></value>
+    </variable>
+    
+
+    
+To support IAC, edit the rpc_wls_jee4\APP-INF\lib\prresources, to add,
+	<env name="/Authentication/RedirectGuests" value="false"/>   
+	
+	 
+Next deploy prsysmgmt.war, prhelp.war.
+
+Login User ID: administrator@pega.com/ Password: install.
+
+4.4, Post configuration urls, searchs. 
+
